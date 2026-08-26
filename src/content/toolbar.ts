@@ -14,15 +14,18 @@ interface ButtonSpec {
   accent: string;
   /** Inline SVG path markup (16x16 viewBox, currentColor stroke). */
   icon: string;
+  /** Pro-only action: shows a gold star badge until the user upgrades. */
+  pro?: boolean;
 }
 
 const BUTTONS: ButtonSpec[] = [
   {
-    action: 'print',
-    label: 'Print',
-    title: 'Bulk print selected emails',
+    action: 'merge',
+    label: 'Merge',
+    title: 'Merge selected emails into one PDF, opened in a new tab (Pro)',
     accent: '#1a73e8',
-    icon: '<path d="M5 7V2h6v5M5 12H3a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-2M5 10h6v4H5z"/>',
+    icon: '<path d="M2 4h5l1.5 2H14v6a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1zM8 8v3M6.5 9.5h3"/>',
+    pro: true,
   },
   {
     action: 'pdf',
@@ -142,6 +145,7 @@ function ensureStyles(): void {
        selection, which makes a pointer-events:none gate race and stick. */
     #${TOOLBAR_ID}:not(.gbe-has-selection) .gbe-btn { opacity: .6; }
     #${TOOLBAR_ID} .gbe-btn {
+      position: relative;
       display: inline-flex;
       align-items: center;
       gap: 6px;
@@ -155,6 +159,20 @@ function ensureStyles(): void {
       white-space: nowrap;
       transition: background .15s ease, border-color .15s ease, box-shadow .15s ease;
     }
+    /* Gold "Pro" star badge in the button's corner; hidden once user is Pro. */
+    #${TOOLBAR_ID} .gbe-pro-badge {
+      position: absolute; top: -6px; right: -5px;
+      width: 15px; height: 15px; border-radius: 50%;
+      display: inline-flex; align-items: center; justify-content: center;
+      background: #f9ab00; color: #fff;
+      font-size: 9px; line-height: 1;
+      box-shadow: 0 0 0 1.5px var(--gbe-btn-bg, #fff), 0 1px 2px rgba(0,0,0,.3);
+      pointer-events: none;
+    }
+    #${TOOLBAR_ID}.gbe-dark .gbe-pro-badge {
+      box-shadow: 0 0 0 1.5px #202124, 0 1px 2px rgba(0,0,0,.5);
+    }
+    #${TOOLBAR_ID}.gbe-pro .gbe-pro-badge { display: none; }
     #${TOOLBAR_ID} .gbe-btn .gbe-ico {
       width: 16px; height: 16px; flex: 0 0 auto;
       color: var(--gbe-accent);
@@ -221,7 +239,10 @@ export function buildToolbar(anchor: Element | null = null): HTMLElement {
     btn.title = b.title;
     btn.setAttribute('aria-label', b.title);
     btn.setAttribute(ACTION_ATTR, b.action);
-    btn.innerHTML = `${iconSvg(b.icon)}<span>${b.label}</span>`;
+    const badge = b.pro
+      ? '<span class="gbe-pro-badge" title="Pro feature" aria-hidden="true">★</span>'
+      : '';
+    btn.innerHTML = `${iconSvg(b.icon)}<span>${b.label}</span>${badge}`;
     bar.appendChild(btn);
   }
   return bar;
@@ -238,6 +259,12 @@ export function setSelectionCount(count: number): void {
   const badge = bar.querySelector('.gbe-count');
   if (badge) badge.textContent = String(count);
   bar.setAttribute('aria-label', `Gmail Bulk Extractor — ${count} selected`);
+}
+
+/** Reflect Pro status: hides the gold star badge on Pro-only buttons when Pro. */
+export function setProState(isPro: boolean): void {
+  const bar = document.getElementById(TOOLBAR_ID);
+  if (bar) bar.classList.toggle('gbe-pro', isPro);
 }
 
 export const TOOLBAR_ELEMENT_ID = TOOLBAR_ID;

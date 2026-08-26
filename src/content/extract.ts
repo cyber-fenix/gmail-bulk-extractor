@@ -64,6 +64,8 @@ async function collectThread(t: SelectedThread, ik: string): Promise<ThreadPaylo
   return {
     threadId: t.threadId,
     subject: t.subject,
+    sender: t.sender,
+    date: t.date,
     html,
     printUrl,
     attachments: parseAttachments(html, ik),

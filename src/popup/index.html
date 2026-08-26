@@ -9,11 +9,49 @@
   <body>
     <main class="wrap">
       <h1>Gmail Bulk Extractor</h1>
-      <p class="hint">
-        Open Gmail, select emails, then use the
-        <strong>Print / PDF / Attachments / ZIP</strong> buttons in the toolbar.
-      </p>
+
+      <section class="plan">
+        <div class="plan-head">
+          <span id="plan-badge" class="badge badge-free">Free</span>
+          <span id="plan-detail" class="plan-detail"></span>
+        </div>
+        <div id="usage" class="usage">
+          <div class="usage-bar"><div id="usage-fill"></div></div>
+          <div id="usage-text" class="usage-text"></div>
+        </div>
+        <div class="cta-row">
+          <button id="upgrade" class="btn btn-primary">Upgrade to Pro</button>
+          <button id="manage" class="btn btn-ghost" hidden>Manage plan</button>
+          <button id="restore" class="btn btn-link">Restore purchase</button>
+        </div>
+      </section>
+
+      <section id="pro" class="pro">
+        <div class="pro-head">
+          <h2>Pro settings</h2>
+          <span id="pro-note" class="pro-note">Available on Pro</span>
+        </div>
+        <label class="field">
+          <span>PDF filename</span>
+          <input type="text" id="pdfNameTemplate" spellcheck="false" />
+        </label>
+        <label class="field">
+          <span>Attachment folder</span>
+          <input type="text" id="attachmentFolderTemplate" spellcheck="false" />
+        </label>
+        <label class="field">
+          <span>ZIP folder</span>
+          <input type="text" id="zipFolderTemplate" spellcheck="false" />
+        </label>
+        <p class="tokens">Tokens: <code>{date}</code> <code>{sender}</code> <code>{subject}</code> <code>{index}</code></p>
+      </section>
+
       <p id="status" class="status">Checking Gmail tab…</p>
+      <p class="hint">
+        Select emails in Gmail, then use the
+        <strong>Print / PDF / Attachments / ZIP</strong> buttons in the toolbar.
+        Only licensing uses the network — your email content never leaves this device.
+      </p>
     </main>
     <script type="module" src="./popup.ts"></script>
   </body>

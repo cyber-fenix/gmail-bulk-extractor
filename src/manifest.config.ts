@@ -42,7 +42,15 @@ export default defineManifest({
       run_at: 'document_start',
       world: 'MAIN',
     },
+    {
+      // ExtensionPay checkout/login handshake. Runs only on extensionpay.com;
+      // never sees Gmail content. extpay is bundled (no remote code) so this
+      // stays MV3-compliant.
+      matches: ['https://extensionpay.com/*'],
+      js: ['src/content/extpay.ts'],
+      run_at: 'document_start',
+    },
   ],
   permissions: ['debugger', 'downloads', 'storage', 'scripting', 'tabs', 'activeTab'],
-  host_permissions: ['https://mail.google.com/*'],
+  host_permissions: ['https://mail.google.com/*', 'https://extensionpay.com/*'],
 });

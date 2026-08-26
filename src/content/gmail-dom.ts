@@ -12,6 +12,10 @@
 export interface SelectedThread {
   threadId: string;
   subject: string;
+  /** Sender display name (best-effort). May be ''. */
+  sender: string;
+  /** Message date as YYYY-MM-DD (best-effort). May be ''. */
+  date: string;
 }
 
 const ROW_SELECTOR = 'tr.zA';
@@ -22,6 +26,12 @@ const THREAD_ID_ATTRS = ['data-legacy-thread-id', 'data-thread-id'] as const;
 
 /** Subject text candidates within a row. */
 const SUBJECT_SELECTORS = ['.bog', '.y6 span', '.bqe'];
+
+/** Sender-name candidates within a row (Gmail marks senders with `email` attr). */
+const SENDER_SELECTORS = ['.yW span[email]', '.yX span[email]', '.zF', '.yP', '.zA .yW span'];
+
+/** Date-cell candidates within a row; `title`/`aria-label` holds the full date. */
+const DATE_SELECTORS = ['.xW span[title]', '.xW span', 'td.xW span'];
 
 /**
  * Anchor candidates for the toolbar, best-first. Each says where to insert:
@@ -78,6 +88,30 @@ export function subjectOfRow(row: Element): string {
   return '';
 }
 
+/** Best-effort sender display name for a row (for naming templates / CSV). */
+export function senderOfRow(row: Element): string {
+  for (const sel of SENDER_SELECTORS) {
+    const el = row.querySelector(sel);
+    // Gmail stores the display name in `name`, the address in `email`.
+    const name = el?.getAttribute('name')?.trim() || el?.textContent?.trim();
+    if (name) return name;
+  }
+  return '';
+}
+
+/** Best-effort message date for a row, normalized to YYYY-MM-DD when parseable. */
+export function dateOfRow(row: Element): string {
+  for (const sel of DATE_SELECTORS) {
+    const el = row.querySelector(sel);
+    const raw = el?.getAttribute('title') || el?.getAttribute('aria-label') || el?.textContent?.trim();
+    if (!raw) continue;
+    const parsed = new Date(raw);
+    if (!Number.isNaN(parsed.getTime())) return parsed.toISOString().slice(0, 10);
+    return raw; // keep whatever Gmail showed if it isn't a parseable date
+  }
+  return '';
+}
+
 /** Collect selected threads (deduped by thread id) from the list view. */
 export function selectedThreads(): SelectedThread[] {
   const rows = document.querySelectorAll(ROW_SELECTOR);
@@ -88,7 +122,12 @@ export function selectedThreads(): SelectedThread[] {
     const threadId = threadIdOfRow(row);
     if (!threadId || seen.has(threadId)) return;
     seen.add(threadId);
-    out.push({ threadId, subject: subjectOfRow(row) });
+    out.push({
+      threadId,
+      subject: subjectOfRow(row),
+      sender: senderOfRow(row),
+      date: dateOfRow(row),
+    });
   });
   return out;
 }

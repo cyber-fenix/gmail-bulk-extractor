@@ -81,6 +81,8 @@ function buildIndexHtml(entries: IndexEntry[]): string {
 export async function buildZip(
   threads: ThreadPayload[],
   onProgress?: (done: number, total: number) => void,
+  /** Pro: derive the per-email folder name (defaults to the sanitized subject). */
+  nameThread?: (thread: ThreadPayload, index: number) => string,
 ): Promise<Blob> {
   const zip = new JSZip();
   const usedFolders = new Set<string>();
@@ -88,8 +90,10 @@ export async function buildZip(
   const total = threads.length;
   let done = 0;
 
-  for (const t of threads) {
-    const folderName = uniquify(sanitizeFilename(t.subject, t.threadId), usedFolders);
+  for (let i = 0; i < threads.length; i++) {
+    const t = threads[i];
+    const rawFolder = nameThread ? nameThread(t, i) : sanitizeFilename(t.subject, t.threadId);
+    const folderName = uniquify(rawFolder, usedFolders);
     const folder = zip.folder(folderName)!;
     folder.file('email.html', t.html);
     const usedFiles = new Set<string>(['email.html']);

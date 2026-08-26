@@ -1,7 +1,13 @@
 // Content script entry: injects the toolbar into Gmail, keeps it present across
 // Gmail's SPA view changes, keeps its selection count in sync, and runs the
 // four actions (print / PDF / attachments / ZIP) on the selected emails.
-import { ACTION_ATTR, buildToolbar, setSelectionCount, TOOLBAR_ELEMENT_ID } from '@/content/toolbar';
+import {
+  ACTION_ATTR,
+  buildToolbar,
+  setProState,
+  setSelectionCount,
+  TOOLBAR_ELEMENT_ID,
+} from '@/content/toolbar';
 import {
   diagnostics,
   findToolbarAnchor,
@@ -10,13 +16,37 @@ import {
 } from '@/content/gmail-dom';
 import { collectThreads } from '@/content/extract';
 import { blobToDataUrl, buildZip } from '@/content/zip';
-import { buildPrintDocument } from '@/content/print';
-import { flashToast, hideToast, showToast } from '@/content/toast';
+import { flashToast, hideToast, showToast, upsellToast } from '@/content/toast';
 import { dateStamp } from '@/lib/download';
 import { inboxKey } from '@/lib/session';
-import type { ExtractAction, RunActionMessage } from '@/types';
+import { FREE_LICENSE, getLicense, openPaymentPage } from '@/lib/license';
+import { addUsage, getUsage } from '@/lib/usage';
+import { checkAction } from '@/lib/entitlements';
+import { getProSettings } from '@/lib/settings';
+import { applyTemplate } from '@/lib/naming';
+import type { ExtractAction, LicenseInfo, RunActionMessage } from '@/types';
 
 let busy = false;
+
+// Cached entitlements so the gate can run synchronously (before the print popup
+// must open within the click's user-activation). Refreshed on load, on focus,
+// and when the background signals a license change.
+let license: LicenseInfo = FREE_LICENSE;
+let usageCount = 0;
+
+async function refreshEntitlements(): Promise<void> {
+  // After an extension reload this content script is orphaned and chrome.* APIs
+  // throw "Extension context invalidated". Bail quietly — the user is told to
+  // reload the tab when they next click an action.
+  if (!chrome.runtime?.id) return;
+  try {
+    license = await getLicense();
+    usageCount = (await getUsage()).count;
+    setProState(license.pro); // hide/show the Pro star badge on the toolbar
+  } catch {
+    /* context invalidated mid-flight */
+  }
+}
 
 async function handleAction(action: ExtractAction): Promise<void> {
   if (busy) return;
@@ -37,27 +67,41 @@ async function handleAction(action: ExtractAction): Promise<void> {
     return;
   }
 
+  // Freemium gate: one place, all actions. Merge is Pro-only; the capped actions
+  // (pdf/attachments/zip) must fit the weekly remaining for free users. Uses
+  // cached entitlements so it stays synchronous (the merge branch below opens
+  // its tab within this click's activation).
+  const gate = checkAction(action, selected.length, license, usageCount);
+  if (!gate.allow) {
+    upsellToast(gate.reason ?? 'Upgrade to Pro for unlimited.', () => void openPaymentPage());
+    return;
+  }
+
   const ik = inboxKey();
   if (!ik) {
     flashToast('Could not read the Gmail session key. Try reloading Gmail.', 4000, { error: true });
     return;
   }
 
-  // Print needs a popup opened *synchronously* within the click's activation,
-  // before the async collect below — otherwise Chrome's pop-up blocker kills it.
-  let printWindow: Window | null = null;
-  if (action === 'print') {
-    printWindow = window.open('', '_blank');
-    if (!printWindow) {
-      flashToast('Allow pop-ups for mail.google.com to use Print.', 4500, { error: true });
+  // Merge opens a tab *synchronously* within the click's activation, before the
+  // async render below — otherwise Chrome's pop-up blocker kills it. We fill it
+  // with the merged PDF (via a blob URL) once the background returns.
+  let mergeWindow: Window | null = null;
+  if (action === 'merge') {
+    mergeWindow = window.open('', '_blank');
+    if (!mergeWindow) {
+      flashToast('Allow pop-ups for mail.google.com to use Merge.', 4500, { error: true });
       return;
     }
-    printWindow.document.write(
-      '<!doctype html><title>Preparing…</title><body style="font:14px arial;padding:24px">Preparing print…</body>',
+    mergeWindow.document.write(
+      '<!doctype html><title>Preparing…</title><body style="font:14px arial;padding:24px">Preparing merged PDF…</body>',
     );
   }
 
   busy = true;
+  // Emails actually processed by a successful action; charged to the free
+  // weekly quota in `finally` (only on success — failures don't burn quota).
+  let processed = 0;
   try {
     showToast(`Reading ${selected.length} email${selected.length > 1 ? 's' : ''}…`, {
       spinner: true,
@@ -67,32 +111,33 @@ async function handleAction(action: ExtractAction): Promise<void> {
     });
 
     if (payloads.length === 0) {
-      printWindow?.close();
+      mergeWindow?.close();
       flashToast('Could not read the selected emails.', 4000, { error: true });
       return;
     }
 
-    // Bulk print: fill the pre-opened popup and invoke the native print dialog.
-    if (action === 'print' && printWindow) {
-      printWindow.document.open();
-      printWindow.document.write(buildPrintDocument(payloads));
-      printWindow.document.close();
-      // Wait for the popup (incl. images) to finish, capped, before printing.
-      await new Promise<void>((resolve) => {
-        let settled = false;
-        const finish = (): void => {
-          if (!settled) {
-            settled = true;
-            resolve();
-          }
-        };
-        printWindow!.addEventListener('load', finish, { once: true });
-        setTimeout(finish, 3000);
+    // Merge (Pro): background renders each email and combines them into one PDF;
+    // we open the result in the pre-opened tab as a blob URL. Chrome's PDF viewer
+    // shows it — the user can print or save from there. No auto print dialog.
+    if (action === 'merge' && mergeWindow) {
+      showToast(`Merging ${payloads.length} email${payloads.length > 1 ? 's' : ''}…`, {
+        spinner: true,
       });
-      printWindow.focus();
-      printWindow.print();
-      const skippedPrint = errors.length ? ` (${errors.length} skipped)` : '';
-      flashToast(`Printing ${payloads.length} email${payloads.length > 1 ? 's' : ''}${skippedPrint}.`);
+      const msg: RunActionMessage = { type: 'run-action', action, threads: payloads };
+      const res = (await chrome.runtime.sendMessage(msg)) as
+        | { ok: boolean; base64?: string; message?: string }
+        | undefined;
+      if (!res?.ok || !res.base64) {
+        mergeWindow.close();
+        flashToast(res?.message ?? 'Merge failed.', 4000, { error: true });
+        return;
+      }
+      const bytes = Uint8Array.from(atob(res.base64), (c) => c.charCodeAt(0));
+      const url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
+      mergeWindow.location.href = url;
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      const skippedMerge = errors.length ? ` (${errors.length} skipped)` : '';
+      flashToast(`Opened merged PDF — ${payloads.length} email${payloads.length > 1 ? 's' : ''}${skippedMerge}.`);
       return;
     }
 
@@ -100,8 +145,16 @@ async function handleAction(action: ExtractAction): Promise<void> {
     // fetches + JSZip); no background round-trip.
     if (action === 'zip') {
       showToast('Building ZIP…', { spinner: true });
-      const blob = await buildZip(payloads, (d, total) =>
-        showToast(`Zipping ${d}/${total}…`, { spinner: true }),
+      // Pro: apply the custom folder template; free uses the default (subject).
+      let zipNamer: ((thread: (typeof payloads)[number], index: number) => string) | undefined;
+      if (license.pro) {
+        const s = await getProSettings();
+        zipNamer = (thread, index) => applyTemplate(s.zipFolderTemplate, { thread, index });
+      }
+      const blob = await buildZip(
+        payloads,
+        (d, total) => showToast(`Zipping ${d}/${total}…`, { spinner: true }),
+        zipNamer,
       );
       // Hand the finished archive to the background to download. A page-side
       // <a download> would be dropped here: the awaits above outlive the click's
@@ -115,6 +168,7 @@ async function handleAction(action: ExtractAction): Promise<void> {
       })) as { ok: boolean; message?: string } | undefined;
       const skippedZip = errors.length ? ` (${errors.length} skipped)` : '';
       if (res?.ok) {
+        processed = payloads.length;
         flashToast(`ZIP downloaded — ${payloads.length} email${payloads.length > 1 ? 's' : ''}${skippedZip}.`);
       } else {
         flashToast(res?.message ?? 'ZIP download failed.', 4000, { error: true });
@@ -128,6 +182,7 @@ async function handleAction(action: ExtractAction): Promise<void> {
       | { ok: boolean; message?: string }
       | undefined;
 
+    if (res?.ok) processed = payloads.length;
     const skipped = errors.length ? ` (${errors.length} skipped)` : '';
     if (res?.message) {
       flashToast(res.message + skipped, 3600, { error: !res.ok });
@@ -137,6 +192,12 @@ async function handleAction(action: ExtractAction): Promise<void> {
   } finally {
     hideToast();
     busy = false;
+    // Charge the free quota only for what actually succeeded. Pro is unlimited,
+    // so we skip metering there entirely.
+    if (processed > 0 && !license.pro) {
+      usageCount += processed;
+      void addUsage(processed);
+    }
   }
 }
 
@@ -152,6 +213,7 @@ function ensureToolbar(): void {
   if (bar && bar.parentElement === anchor.element) return; // already best-placed
   if (!bar) bar = buildToolbar(anchor.element);
   anchor.place(bar); // appendChild/prepend moves the node if it already existed
+  setProState(license.pro); // re-apply after a rebuild drops the class
   syncSelection();
 }
 
@@ -205,11 +267,17 @@ observer.observe(document.body, {
 });
 
 ensureToolbar();
+void refreshEntitlements();
+// Re-sync when the user returns to the tab (e.g. after completing checkout).
+window.addEventListener('focus', () => void refreshEntitlements());
 
-// Progress updates from background long-running actions (e.g. PDF generation).
+// Progress updates from background long-running actions (e.g. PDF generation),
+// plus license-change broadcasts (after a purchase/onPaid).
 chrome.runtime.onMessage.addListener((msg: { type?: string; label?: string; done?: number; total?: number }) => {
   if (msg?.type === 'progress' && typeof msg.done === 'number' && typeof msg.total === 'number') {
     showToast(`${msg.label ?? 'Working'} ${msg.done}/${msg.total}…`, { spinner: true });
+  } else if (msg?.type === 'license-updated') {
+    void refreshEntitlements();
   }
 });
 
