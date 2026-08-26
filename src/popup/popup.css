@@ -1,0 +1,12 @@
+:root { color-scheme: light dark; }
+* { box-sizing: border-box; }
+body { margin: 0; font: 13px/1.5 'Google Sans', Roboto, Arial, sans-serif; }
+.wrap { width: 300px; padding: 16px; }
+h1 { font-size: 15px; margin: 0 0 8px; }
+.hint { color: #5f6368; margin: 0 0 12px; }
+.status { margin: 0; padding: 8px 10px; border-radius: 6px; background: #f1f3f4; color: #202124; }
+@media (prefers-color-scheme: dark) {
+  body { background: #202124; color: #e8eaed; }
+  .hint { color: #9aa0a6; }
+  .status { background: #303134; color: #e8eaed; }
+}
