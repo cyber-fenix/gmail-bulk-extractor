@@ -33,10 +33,19 @@ export type LicensePlan = 'free' | 'subscription' | 'one-time';
 /** Licensing snapshot the background derives from ExtensionPay and hands to
  * the content script / popup. Never contains email content. */
 export interface LicenseInfo {
+  /** Effective Pro: paid OR inside the 7-day reverse trial. Gates all features. */
   pro: boolean;
+  /** True only for an actual paid unlock (subscription or one-time). */
+  paid: boolean;
   plan: LicensePlan;
   /** ExtensionPay subscriptionStatus, when the plan is a subscription. */
   status?: 'active' | 'past_due' | 'canceled';
+  /** True while the reverse trial is still within its window. */
+  trialActive: boolean;
+  /** Whole days left in the trial (0 when not in a trial). */
+  trialDaysLeft: number;
+  /** True once a trial has ever been started (so we don't re-offer it). */
+  trialUsed: boolean;
   email?: string | null;
 }
 

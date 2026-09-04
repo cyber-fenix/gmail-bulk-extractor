@@ -44,9 +44,10 @@ const BUTTONS: ButtonSpec[] = [
   {
     action: 'zip',
     label: 'ZIP',
-    title: 'Export selected emails + attachments as a ZIP',
+    title: 'Export selected emails + attachments as a ZIP (Pro)',
     accent: '#e37400',
     icon: '<path d="M2.5 5.5 8 2l5.5 3.5v5L8 14l-5.5-3.5zM2.5 5.5 8 9m0 0 5.5-3.5M8 9v5M8 4v1M8 6v1"/>',
+    pro: true,
   },
 ];
 

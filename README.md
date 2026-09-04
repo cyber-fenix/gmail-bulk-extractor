@@ -1,39 +1,95 @@
-# Gmail Bulk Extractor
+<p align="center">
+  <img src="./assets/readme/gbe-hero.png" width="820" alt="Gmail inbox with several emails selected and the Gmail Bulk Extractor toolbar showing Merge, PDF, Attachments and ZIP">
+</p>
 
-An open-source Chrome extension (Manifest V3) — free to use, with an optional
-Pro upgrade — that adds a toolbar to Gmail so you can act on **multiple selected
-emails at once**:
+<h1 align="center">Gmail Bulk Extractor</h1>
 
-- **PDF** — save each selected email as a PDF
-- **Attachments** — download all attachments from the selected emails
-- **ZIP** — export the selected emails + attachments as a single archive
-- **Merge** *(Pro)* — render all selected emails into **one PDF** and open it in
-  a new tab (print or save it from there)
+<p align="center">
+  <b>Select many Gmail emails. Save them all as PDFs, grab every attachment,<br>
+  export a ZIP, or merge the lot into one document.</b>
+</p>
 
-Works with Gmail and Google Workspace accounts.
+<p align="center">
+  No OAuth · no server · nothing ever leaves your browser
+</p>
+
+<p align="center">
+  <a href="https://chromewebstore.google.com/detail/gmail-bulk-extractor/kiplmkbhobmlolkeodgophegcdphiolp" target="_blank" rel="noopener">
+    <img src="https://img.shields.io/badge/Add%20to%20Chrome-%20-4285F4?style=for-the-badge&logo=googlechrome&logoColor=white&labelColor=4285F4" alt="Add to Chrome" height="42">
+  </a>
+</p>
+
+<p align="center">
+  <a href="https://chromewebstore.google.com/detail/gmail-bulk-extractor/kiplmkbhobmlolkeodgophegcdphiolp" target="_blank" rel="noopener"><img src="https://img.shields.io/chrome-web-store/v/kiplmkbhobmlolkeodgophegcdphiolp?color=fb9836&label=chrome%20web%20store" alt="Chrome Web Store version"></a>
+  <img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT licence">
+  <img src="https://img.shields.io/badge/manifest-v3-4285F4" alt="Manifest V3">
+  <img src="https://img.shields.io/badge/privacy-nothing%20leaves%20your%20device-2ea44f" alt="Privacy: nothing leaves your device">
+</p>
+
+<!--
+  Users and rating badges: shields.io returns "not found" for both until the
+  listing has actual installs and reviews. Move them into the row above once
+  the store page shows them.
+
+  <a href="https://chromewebstore.google.com/detail/gmail-bulk-extractor/kiplmkbhobmlolkeodgophegcdphiolp" target="_blank" rel="noopener"><img src="https://img.shields.io/chrome-web-store/users/kiplmkbhobmlolkeodgophegcdphiolp?color=fb9836&label=users" alt="Users"></a>
+  <a href="https://chromewebstore.google.com/detail/gmail-bulk-extractor/kiplmkbhobmlolkeodgophegcdphiolp" target="_blank" rel="noopener"><img src="https://img.shields.io/chrome-web-store/rating/kiplmkbhobmlolkeodgophegcdphiolp?color=fb9836&label=rating" alt="Rating"></a>
+-->
+
+<p align="center">
+  <a href="https://cyber-fenix.github.io/products/gmail-bulk-extractor/">Website</a> ·
+  <a href="https://cyber-fenix.github.io/support/">Support</a> ·
+  <a href="https://cyber-fenix.github.io/privacy/">Privacy</a>
+</p>
+
+---
+
+## What it does
+
+Gmail is excellent at showing you one message and hopeless the moment you need
+fifty of them saved, filed, or handed to someone else. This extension adds one
+toolbar to Gmail that acts on **every message you've selected**.
+
+<p align="center">
+  <img src="./assets/readme/gbe-toolbar.png" width="760" alt="The toolbar: BULK counter, Merge, PDF, Attachments and ZIP buttons, with gold stars marking the Pro actions">
+</p>
+
+| Action | What you get |
+|---|---|
+| **PDF** | One PDF per selected email, laid out like Gmail's own print view |
+| **Attachments** | Every attachment from every selected email, in a folder per message |
+| **ZIP** ⭐ | Emails + attachments as a single archive, one folder per email plus a browsable `index.html` |
+| **Merge** ⭐ | The whole selection rendered into **one** PDF, opened in a new tab to read, print or save |
+
+⭐ = Pro. Works with Gmail and Google Workspace accounts, including multiple
+signed-in accounts.
 
 ## Free vs Pro
 
-The extension is free to use, with an optional **Pro** upgrade (a subscription
-**or** a one-time unlock) handled through [ExtensionPay](https://extensionpay.com)
-(Stripe under the hood).
+Every new install gets a **7-day Pro trial** — all features, no limits. After it
+ends the extension keeps working on the Free tier; nothing you already exported
+is affected.
 
-| | Free | Pro |
+| | Free | Pro & trial |
 |---|---|---|
-| PDF / Attachments / ZIP | ✅ | ✅ |
+| PDF, Attachments | ✅ | ✅ |
 | Emails per week | up to **100** | **unlimited** |
-| **Merge** — all emails into one PDF, opened in a tab | — | ✅ |
-| Filename / folder naming | defaults | **custom templates** (`{date} {sender} {subject} {index}`) |
+| ZIP export | — | ✅ |
+| Merge into one PDF | — | ✅ |
+| File / folder naming | defaults | **custom templates** |
 
-The weekly limit is counted across the free actions (PDF / Attachments / ZIP) by
-number of emails processed and resets on a rolling 7-day window. **Merge** does
-not auto-open the print dialog — it opens the combined PDF in Chrome's viewer so
-you decide whether to print or save.
+Pro is a subscription **or** a one-time unlock, handled by
+[ExtensionPay](https://extensionpay.com) with Stripe underneath. The weekly
+count covers emails processed by the free actions and resets on a rolling 7-day
+window.
 
-Open the extension's popup to see your plan and weekly usage, upgrade, manage a
-subscription, restore a purchase, and configure Pro naming templates.
+<p align="center">
+  <img src="./assets/readme/gbe-popup.png" width="360" alt="The extension popup showing plan, weekly usage and Pro naming templates">
+</p>
 
-## How it works (no Gmail API / no OAuth)
+On Pro, file and folder names follow your own templates — `{date}`, `{sender}`,
+`{subject}`, `{index}` — set from the popup.
+
+## How it works — no Gmail API, no OAuth
 
 The extension reads mail through your **existing Gmail session** rather than the
 Gmail REST API:
@@ -41,47 +97,32 @@ Gmail REST API:
 - Email content comes from Gmail's built-in print view (`view=pt`), fetched
   same-origin with your session cookies.
 - Attachment bytes come from Gmail's own attachment URLs.
-- PDFs are rendered locally via the Chrome DevTools Protocol
+- PDFs are rendered locally through the Chrome DevTools Protocol
   (`Page.printToPDF`), which is why the `debugger` permission is requested.
 
-**Your email content never leaves your device** — all extraction, PDF
-rendering, and archiving happen locally. The only network calls the extension
-makes are to **extensionpay.com / Stripe**, and only to check or complete a Pro
-license. No email data is ever part of those requests. Because it uses no
-restricted Gmail OAuth scopes, there is **no Google Cloud project or OAuth
-consent setup** required.
+**Your email content never leaves your device.** All extraction, PDF rendering
+and archiving happen locally. The only network calls the extension makes are to
+extensionpay.com / Stripe, and only to check or complete a Pro licence — no
+email data is part of those requests. Because it uses no restricted Gmail OAuth
+scopes, there is **no Google Cloud project or consent screen** to set up.
 
 > While a PDF is generated, Chrome shows a *"Gmail Bulk Extractor started
 > debugging this browser"* banner on a background tab. That is the `debugger`
-> permission performing `Page.printToPDF`; it clears when the operation
-> finishes.
+> permission performing `Page.printToPDF`; it clears when the operation finishes.
+
+<p align="center">
+  <img src="./assets/readme/gbe-merged.png" width="760" alt="A merged PDF of several emails open in Chrome's PDF viewer">
+</p>
 
 ## Where files are saved
 
 - **Attachments** → `Downloads/gmail-extract-<date>/<email subject>/…`
 - **PDFs** → `Downloads/gmail-pdf-<date>/<email subject>.pdf`
-- **ZIP** → `Downloads/gmail-export-<date>.zip` (one folder per email containing
-  `email.html` + its attachments, plus a top-level `index.html` index)
+- **ZIP** → `Downloads/gmail-export-<date>.zip`
 
-On **Pro**, the `<email subject>` folder/filename segments follow your naming
-templates. **Merge** doesn't save a file — it opens the combined PDF in a new
-tab, from where you can print or save it yourself.
-
-## Install (development)
-
-```bash
-npm install
-npm run build      # or: npm run dev  (rebuilds on change)
-```
-
-1. Open `chrome://extensions`
-2. Enable **Developer mode**
-3. Click **Load unpacked** and select the `dist/` folder
-
-Then open Gmail, select some emails, and use the toolbar buttons.
-
-> After loading a new build, reload the Gmail tab as well so the updated content
-> script takes effect.
+On Pro the `<email subject>` segments follow your naming templates. **Merge**
+doesn't save a file — it opens the combined PDF in a new tab, so you decide
+whether to print or save it.
 
 ## Permissions
 
@@ -92,9 +133,27 @@ Then open Gmail, select some emails, and use the toolbar buttons.
 | `scripting`, `tabs`, `activeTab` | injecting the toolbar and rendering the print view |
 | `storage` | plan/usage counter and Pro settings |
 | host: `mail.google.com` | reading the logged-in Gmail session |
-| host: `extensionpay.com` | Pro license check + checkout (no email data) |
+| host: `extensionpay.com` | Pro licence check + checkout (no email data) |
 
-## Project layout
+## Development
+
+```bash
+npm install
+npm run build      # tsc --noEmit && vite build  → dist/
+npm run dev        # rebuilds on change
+```
+
+1. Open `chrome://extensions`
+2. Enable **Developer mode**
+3. **Load unpacked** → select `dist/`
+
+Then open Gmail, select some emails, and use the toolbar.
+
+> After loading a new build, reload the Gmail tab too so the updated content
+> script takes effect.
+
+<details>
+<summary><b>Project layout</b></summary>
 
 ```
 src/
@@ -129,6 +188,18 @@ Gmail's internal markup is undocumented and can change; when it does, the fix is
 almost always confined to `content/gmail-dom.ts` and `lib/session.ts`. Run
 `window.__gbeDiag()` in the Gmail page console to inspect selector matches.
 
+</details>
+
+## Found a bug?
+
+[Open an issue](https://github.com/cyber-fenix/gmail-bulk-extractor/issues) — please
+include your browser, what you selected, which button you pressed, and what
+happened instead.
+
+If the extension saves you time, a
+**[★★★★★ review on the Chrome Web Store](https://chromewebstore.google.com/detail/gmail-bulk-extractor/kiplmkbhobmlolkeodgophegcdphiolp/reviews)**
+helps more than anything else.
+
 ## License
 
-MIT — see [LICENSE](./LICENSE).
+MIT — see [LICENSE](./LICENSE). Built by [CyberFenix](https://cyber-fenix.github.io/).

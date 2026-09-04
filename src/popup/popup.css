@@ -11,6 +11,7 @@ h2 { font-size: 13px; margin: 0; }
 .badge { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; }
 .badge-free { background: #e8eaed; color: #3c4043; }
 .badge-pro { background: #1a73e8; color: #fff; }
+.badge-trial { background: #f9ab00; color: #3c2f00; }
 .plan-detail { color: #5f6368; font-size: 12px; }
 
 .usage { margin-bottom: 12px; }

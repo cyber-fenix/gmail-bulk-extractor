@@ -12,7 +12,7 @@ export default defineConfig({
   plugins: [crx({ manifest })],
   build: {
     target: 'esnext',
-    sourcemap: true,
+    sourcemap: false,
   },
   server: {
     port: 5173,

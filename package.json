@@ -1,6 +1,6 @@
 {
   "name": "gmail-bulk-extractor",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Chrome extension to bulk-print, save as PDF, download attachments, and ZIP-export selected Gmail emails.",
   "license": "MIT",
   "type": "module",

@@ -15,12 +15,19 @@ export interface GateResult {
   upsell?: boolean;
 }
 
-/** Actions only Pro users may run at all (regardless of the weekly cap). */
-const PRO_ONLY_ACTIONS: ReadonlySet<ExtractAction> = new Set(['merge']);
+/** Actions only Pro users may run at all (regardless of the weekly cap).
+ * `pro` here means effective Pro — paid OR inside the reverse trial. */
+const PRO_ONLY_ACTIONS: ReadonlySet<ExtractAction> = new Set(['merge', 'zip']);
+
+/** Human labels for Pro-only actions, for the upsell copy. */
+const PRO_ACTION_LABEL: Partial<Record<ExtractAction, string>> = {
+  merge: 'Merge into one PDF',
+  zip: 'ZIP export',
+};
 
 /**
  * Decide whether `action` (processing `count` emails) may run.
- *  - Pro-only actions (merge) require Pro, no cap.
+ *  - Pro-only actions (merge, zip) require Pro, no cap.
  *  - Everything else: Pro → unlimited; free → must fit the weekly remaining.
  */
 export function checkAction(
@@ -34,7 +41,7 @@ export function checkAction(
     return {
       allow: false,
       upsell: true,
-      reason: 'Merge into one PDF is a Pro feature — tap to upgrade.',
+      reason: `${PRO_ACTION_LABEL[action] ?? 'This'} is a Pro feature — tap to upgrade.`,
     };
   }
 

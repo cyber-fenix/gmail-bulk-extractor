@@ -1,7 +1,7 @@
 // Popup dashboard: plan + weekly usage, upgrade/manage/restore, and Pro-only
 // settings (merged PDF, naming templates). Talks to the background for
 // licensing; reads/writes usage + settings from chrome.storage.
-import { getLicense, openLoginPage, openPaymentPage } from '@/lib/license';
+import { getLicense, openLoginPage, openPaymentPage, openTrialPage } from '@/lib/license';
 import { FREE_WEEKLY_EMAILS, getUsage } from '@/lib/usage';
 import { getProSettings, setProSettings } from '@/lib/settings';
 import type { LicenseInfo, ProSettings } from '@/types';
@@ -15,6 +15,7 @@ const els = {
   usage: $('usage'),
   usageFill: $<HTMLDivElement>('usage-fill'),
   usageText: $('usage-text'),
+  trial: $<HTMLButtonElement>('trial'),
   upgrade: $<HTMLButtonElement>('upgrade'),
   manage: $<HTMLButtonElement>('manage'),
   restore: $<HTMLButtonElement>('restore'),
@@ -29,29 +30,47 @@ const els = {
 const TEMPLATE_FIELDS = ['pdfNameTemplate', 'attachmentFolderTemplate', 'zipFolderTemplate'] as const;
 
 function renderPlan(license: LicenseInfo, usage: { count: number; remaining: number }): void {
-  if (license.pro) {
+  // Hide everything conditional up front, then switch on state.
+  els.usage.hidden = true;
+  els.trial.hidden = true;
+  els.upgrade.hidden = true;
+  els.manage.hidden = true;
+  els.restore.hidden = true;
+
+  if (license.paid) {
     els.badge.textContent = 'Pro';
     els.badge.className = 'badge badge-pro';
     const kind = license.plan === 'one-time' ? 'One-time unlock' : 'Subscription';
     const status = license.status && license.status !== 'active' ? ` · ${license.status}` : '';
-    els.detail.textContent = `${kind}${status} · unlimited emails`;
-    els.usage.hidden = true;
-    els.upgrade.hidden = true;
+    els.detail.textContent = `${kind}${status} · unlimited, all features`;
     els.manage.hidden = false;
-    els.restore.hidden = true;
-  } else {
-    els.badge.textContent = 'Free';
-    els.badge.className = 'badge badge-free';
-    els.detail.textContent = `${FREE_WEEKLY_EMAILS} emails / week`;
-    els.usage.hidden = false;
-    const pct = Math.min(100, Math.round((usage.count / FREE_WEEKLY_EMAILS) * 100));
-    els.usageFill.style.width = `${pct}%`;
-    els.usageFill.classList.toggle('full', usage.remaining === 0);
-    els.usageText.textContent = `${usage.count} / ${FREE_WEEKLY_EMAILS} used · ${usage.remaining} left this week`;
-    els.upgrade.hidden = false;
-    els.manage.hidden = true;
-    els.restore.hidden = false;
+    return;
   }
+
+  if (license.trialActive) {
+    els.badge.textContent = 'Pro trial';
+    els.badge.className = 'badge badge-trial';
+    const d = license.trialDaysLeft;
+    els.detail.textContent = `${d} day${d === 1 ? '' : 's'} left · unlimited, all features`;
+    els.upgrade.hidden = false;
+    els.upgrade.textContent = 'Upgrade to keep Pro';
+    return;
+  }
+
+  // Free (trial expired or never started).
+  els.badge.textContent = 'Free';
+  els.badge.className = 'badge badge-free';
+  els.detail.textContent = `PDF + Attachments · ${FREE_WEEKLY_EMAILS}/week`;
+  els.usage.hidden = false;
+  const pct = Math.min(100, Math.round((usage.count / FREE_WEEKLY_EMAILS) * 100));
+  els.usageFill.style.width = `${pct}%`;
+  els.usageFill.classList.toggle('full', usage.remaining === 0);
+  els.usageText.textContent = `${usage.count} / ${FREE_WEEKLY_EMAILS} used · ${usage.remaining} left this week`;
+  els.upgrade.hidden = false;
+  els.upgrade.textContent = 'Upgrade to Pro';
+  els.restore.hidden = false;
+  // Offer the trial only if it was never started.
+  els.trial.hidden = license.trialUsed;
 }
 
 function renderSettings(license: LicenseInfo, settings: ProSettings): void {
@@ -79,6 +98,7 @@ async function init(): Promise<void> {
   renderPlan(license, usage);
   renderSettings(license, settings);
 
+  els.trial.addEventListener('click', () => void openTrialPage());
   els.upgrade.addEventListener('click', () => void openPaymentPage());
   els.manage.addEventListener('click', () => void openPaymentPage());
   els.restore.addEventListener('click', () => void openLoginPage());

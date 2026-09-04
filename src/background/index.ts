@@ -47,7 +47,19 @@ extpay.onPaid.addListener(() => {
   void refreshLicense().then(broadcastLicense);
 });
 
+extpay.onTrialStarted.addListener(() => {
+  void refreshLicense().then(broadcastLicense);
+});
+
 void refreshLicense();
+
+// Reverse trial: on first install, send the user to ExtensionPay's trial page so
+// their 7-day Pro trial starts. (ExtPay trials require this one confirmation.)
+chrome.runtime.onInstalled.addListener((details) => {
+  if (details.reason === 'install') {
+    extpay.openTrialPage('7-day Pro trial').catch(() => undefined);
+  }
+});
 
 // Licensing messages from content script / popup.
 chrome.runtime.onMessage.addListener(
@@ -66,6 +78,12 @@ chrome.runtime.onMessage.addListener(
     }
     if (msg?.type === 'open-login') {
       extpay.openLoginPage().then(() => sendResponse({ ok: true })).catch((e: unknown) =>
+        sendResponse({ ok: false, message: (e as Error).message }),
+      );
+      return true;
+    }
+    if (msg?.type === 'open-trial') {
+      extpay.openTrialPage('7-day Pro trial').then(() => sendResponse({ ok: true })).catch((e: unknown) =>
         sendResponse({ ok: false, message: (e as Error).message }),
       );
       return true;
