@@ -6,10 +6,14 @@ import pkg from '../package.json';
 // session and drive downloads + printToPDF.
 export default defineManifest({
   manifest_version: 3,
-  name: 'Gmail Bulk Extractor',
-  version: pkg.version,
+  // Store search ranks the title heavily, and nobody types "extractor" — the
+  // queries are "save gmail as pdf" and "download gmail attachments". Brand
+  // first, then the words people actually search. Max 75 chars.
+  name: 'Gmail Bulk Extractor - Save as PDF & Download Attachments',
+  // Shown under the title in search results and indexed. Max 132 chars.
   description:
-    'Bulk-print, save as PDF, download attachments, and ZIP-export selected Gmail emails.',
+    'Select multiple Gmail emails and save them as PDF, download all attachments in bulk, export a ZIP, or merge into one PDF.',
+  version: pkg.version,
   icons: {
     16: 'icons/icon16.png',
     48: 'icons/icon48.png',

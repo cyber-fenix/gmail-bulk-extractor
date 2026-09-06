@@ -16,13 +16,14 @@ import {
 } from '@/content/gmail-dom';
 import { collectThreads } from '@/content/extract';
 import { blobToDataUrl, buildZip } from '@/content/zip';
-import { flashToast, hideToast, showToast, upsellToast } from '@/content/toast';
+import { actionToast, flashToast, hideToast, showToast, upsellToast } from '@/content/toast';
 import { dateStamp } from '@/lib/download';
 import { inboxKey } from '@/lib/session';
 import { FREE_LICENSE, getLicense, openPaymentPage } from '@/lib/license';
 import { addUsage, getUsage } from '@/lib/usage';
 import { checkAction } from '@/lib/entitlements';
 import { getProSettings } from '@/lib/settings';
+import { markReviewed, recordRun, REVIEW_URL } from '@/lib/review';
 import { applyTemplate } from '@/lib/naming';
 import type { ExtractAction, LicenseInfo, RunActionMessage } from '@/types';
 
@@ -198,7 +199,29 @@ async function handleAction(action: ExtractAction): Promise<void> {
       usageCount += processed;
       void addUsage(processed);
     }
+    if (processed > 0) void maybeAskForReview();
   }
+}
+
+/**
+ * Count a successful run and, at the two milestones, ask for a store review.
+ * Deferred past the success toast so it replaces that message rather than
+ * fighting it, and skipped if another action has started in the meantime.
+ */
+async function maybeAskForReview(): Promise<void> {
+  if (!(await recordRun())) return;
+  window.setTimeout(() => {
+    if (busy) return;
+    actionToast(
+      'Glad it helped. Would you rate it on the Web Store?',
+      'Rate ★',
+      () => {
+        void markReviewed();
+        window.open(REVIEW_URL, '_blank', 'noopener');
+      },
+      7000,
+    );
+  }, 4000);
 }
 
 /**

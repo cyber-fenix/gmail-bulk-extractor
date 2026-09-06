@@ -20,7 +20,8 @@ function ensureStyles(): void {
     }
     #${TOAST_ID}.gbe-show { opacity: 1; }
     #${TOAST_ID}.gbe-error { background: #c5221f; }
-    #${TOAST_ID}.gbe-upsell { background: #1a73e8; cursor: pointer; }
+    #${TOAST_ID}.gbe-clickable { cursor: pointer; }
+    #${TOAST_ID}.gbe-upsell { background: #1a73e8; }
     #${TOAST_ID}.gbe-upsell:hover { background: #1b66c9; }
     #${TOAST_ID} .gbe-cta {
       margin-left: 4px; padding: 3px 10px; border-radius: 999px;
@@ -50,10 +51,10 @@ function el(): HTMLElement {
 
 let hideTimer: number | undefined;
 
-/** Reset any interactive state left over from a previous upsell toast. */
+/** Reset any interactive state left over from a previous clickable toast. */
 function clearInteractive(t: HTMLElement): void {
   t.onclick = null;
-  t.classList.remove('gbe-upsell');
+  t.classList.remove('gbe-upsell', 'gbe-clickable');
 }
 
 /** Show a persistent toast (e.g. progress). `spinner` adds a spinner. */
@@ -68,27 +69,41 @@ export function showToast(message: string, opts: { spinner?: boolean; error?: bo
 }
 
 /**
- * Clickable upsell toast: whole toast triggers `onClick` (e.g. open checkout),
- * with an "Upgrade" pill for affordance. Auto-dismisses after `ms`.
+ * Clickable toast: the whole toast triggers `onClick`, with a pill labelled
+ * `cta` for affordance. Auto-dismisses after `ms`. `accent` paints it in the
+ * blue upsell colour; without it the toast stays the neutral dark, which is
+ * what a low-key ask (e.g. a review prompt) wants.
  */
-export function upsellToast(message: string, onClick: () => void, ms = 6000): void {
+export function actionToast(
+  message: string,
+  cta: string,
+  onClick: () => void,
+  ms = 6000,
+  opts: { accent?: boolean } = {},
+): void {
   const t = el();
   window.clearTimeout(hideTimer);
   clearInteractive(t);
   t.classList.remove('gbe-error');
-  t.classList.add('gbe-upsell');
+  t.classList.toggle('gbe-upsell', !!opts.accent);
+  t.classList.add('gbe-clickable');
   t.innerHTML = '';
   t.appendChild(document.createTextNode(message));
-  const cta = document.createElement('span');
-  cta.className = 'gbe-cta';
-  cta.textContent = 'Upgrade';
-  t.appendChild(cta);
+  const pill = document.createElement('span');
+  pill.className = 'gbe-cta';
+  pill.textContent = cta;
+  t.appendChild(pill);
   t.onclick = () => {
     onClick();
     hideToast();
   };
   requestAnimationFrame(() => t.classList.add('gbe-show'));
   hideTimer = window.setTimeout(hideToast, ms);
+}
+
+/** Upsell toast: clickable, blue, "Upgrade" pill. */
+export function upsellToast(message: string, onClick: () => void, ms = 6000): void {
+  actionToast(message, 'Upgrade', onClick, ms, { accent: true });
 }
 
 /** Show a toast and auto-dismiss after `ms`. */
